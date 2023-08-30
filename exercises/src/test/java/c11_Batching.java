@@ -1,5 +1,6 @@
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
@@ -29,9 +30,9 @@ public class c11_Batching extends BatchingBase {
     @Test
     public void batch_writer() {
         //todo do your changes here
-        Flux<Void> dataStream = null;
-        dataStream();
-        writeToDisk(null);
+        Flux<Void> dataStream = dataStream()
+                .buffer(10)
+                .concatMap(this::writeToDisk);
 
         //do not change the code below
         StepVerifier.create(dataStream)
@@ -50,9 +51,12 @@ public class c11_Batching extends BatchingBase {
     @Test
     public void command_gateway() {
         //todo: implement your changes here
-        Flux<Void> processCommands = null;
-        inputCommandStream();
-        sendCommand(null);
+        Flux<Void> processCommands = inputCommandStream()
+                .groupBy(Command::getAggregateId)
+                .parallel()
+                .runOn(Schedulers.parallel())
+                .flatMap(flux -> flux.concatMap(this::sendCommand))
+                .sequential();
 
         //do not change the code below
         Duration duration = StepVerifier.create(processCommands)
@@ -69,6 +73,8 @@ public class c11_Batching extends BatchingBase {
     @Test
     public void sum_over_time() {
         Flux<Long> metrics = metrics()
+                .window(Duration.ofSeconds(1))
+                .concatMap(m -> m.reduce(Long::sum))
                 //todo: implement your changes here
                 .take(10);
 
