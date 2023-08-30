@@ -3,6 +3,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,7 +33,12 @@ public class c13_Context extends ContextBase {
      */
     public Mono<Message> messageHandler(String payload) {
         //todo: do your changes withing this method
-        return Mono.just(new Message("set correlation_id from context here", payload));
+        return Mono.just(payload)
+                .flatMap(payloadItem ->
+                        Mono.deferContextual(contextView ->
+                                Mono.just(new Message(contextView.get(HTTP_CORRELATION_ID), payloadItem))
+                        )
+                );
     }
 
     @Test
@@ -56,6 +62,8 @@ public class c13_Context extends ContextBase {
             ctx.get(AtomicInteger.class).incrementAndGet();
             return openConnection();
         });
+        var atomicInteger = new AtomicInteger(0);
+        repeat = repeat.contextWrite(context -> context.put(AtomicInteger.class, atomicInteger));
         //todo: change this line only
         ;
 
@@ -77,11 +85,18 @@ public class c13_Context extends ContextBase {
     @Test
     public void pagination() {
         AtomicInteger pageWithError = new AtomicInteger(); //todo: set this field when error occurs
+        AtomicInteger curPageNumber = new AtomicInteger();
 
         //todo: start from here
-        Flux<Integer> results = getPage(0)
+        Flux<Integer> results = Mono.deferContextual(ctx -> getPage(((AtomicInteger)ctx.get("page")).getAndIncrement()))
+                .onErrorResume(ex -> Mono.deferContextual(ctx -> {
+                    ((AtomicInteger)ctx.get("error")).set(((AtomicInteger)ctx.get("page")).get() - 1);
+                    return Mono.empty();
+                }))
                 .flatMapMany(Page::getResult)
                 .repeat(10)
+                .contextWrite(context -> context.put("page", curPageNumber))
+                .contextWrite(context -> context.put("error", pageWithError))
                 .doOnNext(i -> System.out.println("Received: " + i));
 
 
