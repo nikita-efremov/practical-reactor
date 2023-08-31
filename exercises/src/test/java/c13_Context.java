@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
 import reactor.util.context.ContextView;
@@ -33,12 +34,8 @@ public class c13_Context extends ContextBase {
      */
     public Mono<Message> messageHandler(String payload) {
         //todo: do your changes withing this method
-        return Mono.just(payload)
-                .flatMap(payloadItem ->
-                        Mono.deferContextual(contextView ->
-                                Mono.just(new Message(contextView.get(HTTP_CORRELATION_ID), payloadItem))
-                        )
-                );
+        return Mono.deferContextual(contextView ->
+                Mono.just(new Message(contextView.get(HTTP_CORRELATION_ID), payload)));
     }
 
     @Test
@@ -61,9 +58,7 @@ public class c13_Context extends ContextBase {
         Mono<Void> repeat = Mono.deferContextual(ctx -> {
             ctx.get(AtomicInteger.class).incrementAndGet();
             return openConnection();
-        });
-        var atomicInteger = new AtomicInteger(0);
-        repeat = repeat.contextWrite(context -> context.put(AtomicInteger.class, atomicInteger));
+        }).contextWrite(Context.of(AtomicInteger.class, new AtomicInteger(0)))
         //todo: change this line only
         ;
 
@@ -85,19 +80,21 @@ public class c13_Context extends ContextBase {
     @Test
     public void pagination() {
         AtomicInteger pageWithError = new AtomicInteger(); //todo: set this field when error occurs
-        AtomicInteger curPageNumber = new AtomicInteger();
 
         //todo: start from here
-        Flux<Integer> results = Mono.deferContextual(ctx -> getPage(((AtomicInteger)ctx.get("page")).getAndIncrement()))
-                .onErrorResume(ex -> Mono.deferContextual(ctx -> {
-                    ((AtomicInteger)ctx.get("error")).set(((AtomicInteger)ctx.get("page")).get() - 1);
-                    return Mono.empty();
-                }))
+        Flux<Integer> results = Mono.deferContextual(ctx -> getPage(ctx.get(AtomicInteger.class).get()))
+                .doOnEach(signal -> {
+                    if (signal.getType() == SignalType.ON_ERROR) {
+                        pageWithError.set(signal.getContextView().get(AtomicInteger.class).getAndIncrement());
+                    } else if (signal.getType() == SignalType.ON_NEXT){
+                        signal.getContextView().get(AtomicInteger.class).incrementAndGet();
+                    }
+                })
+                .onErrorResume(ex -> Mono.empty())
                 .flatMapMany(Page::getResult)
                 .repeat(10)
-                .contextWrite(context -> context.put("page", curPageNumber))
-                .contextWrite(context -> context.put("error", pageWithError))
-                .doOnNext(i -> System.out.println("Received: " + i));
+                .doOnNext(i -> System.out.println("Received: " + i))
+                .contextWrite(Context.of(AtomicInteger.class, new AtomicInteger(0)));
 
 
         //don't change this code
