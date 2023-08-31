@@ -32,7 +32,7 @@ public class c11_Batching extends BatchingBase {
         //todo do your changes here
         Flux<Void> dataStream = dataStream()
                 .buffer(10)
-                .concatMap(this::writeToDisk);
+                .flatMap(this::writeToDisk);
 
         //do not change the code below
         StepVerifier.create(dataStream)
@@ -53,10 +53,7 @@ public class c11_Batching extends BatchingBase {
         //todo: implement your changes here
         Flux<Void> processCommands = inputCommandStream()
                 .groupBy(Command::getAggregateId)
-                .parallel()
-                .runOn(Schedulers.parallel())
-                .flatMap(flux -> flux.concatMap(this::sendCommand))
-                .sequential();
+                .flatMap(flux -> flux.concatMap(this::sendCommand));
 
         //do not change the code below
         Duration duration = StepVerifier.create(processCommands)
