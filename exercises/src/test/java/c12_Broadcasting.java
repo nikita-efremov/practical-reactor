@@ -33,7 +33,8 @@ public class c12_Broadcasting extends BroadcastingBase {
     public void sharing_is_caring() throws InterruptedException {
         Flux<Message> messages = messageStream()
                 .publish()
-                .autoConnect(2)
+                .refCount(2)
+                //.autoConnect(2) //can be used instead of refCount(2)
                 //todo: do your changes here
                 ;
 
@@ -88,6 +89,7 @@ public class c12_Broadcasting extends BroadcastingBase {
         Flux<String> updates = systemUpdates()
                 .replay()
                 .autoConnect()
+                //.cache() //possible too, it is a shortcut for two operators above
                 //todo: do your changes here
                 ;
 
