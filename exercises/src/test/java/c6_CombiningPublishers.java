@@ -79,8 +79,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void streaming_service() {
         //todo: feel free to change code as you need
         Flux<Message> messageFlux = streamingService()
-                .flux()
-                .flatMap(flux -> flux);
+                .flatMapMany(flux -> flux);
 
         //don't change below this line
         StepVerifier.create(messageFlux)
@@ -124,7 +123,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void task_executor_again() {
         //todo: feel free to change code as you need
         Flux<Void> tasks = taskExecutor()
-                .concatMap(Mono::flux);
+                .concatMap(t -> t);
 
         //don't change below this line
         StepVerifier.create(tasks)
@@ -223,11 +222,7 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
         Mono<Boolean> successful = Mono.when(openFile())
                 .and(writeToFile("0x3522285912341"))
                 .then(closeFile())
-                .then(Mono.just(true));
-
-        openFile();
-        writeToFile("0x3522285912341");
-        closeFile();
+                .thenReturn(true);
 
         //don't change below this line
         StepVerifier.create(successful)
@@ -306,8 +301,11 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
     public void car_factory() {
         //todo: feel free to change code as you need
         Flux<Car> producedCars = carChassisProducer()
-                .zipWith(carEngineProducer())
-                .map(tuple -> new Car(tuple.getT1(), tuple.getT2()));
+                .zipWith(carEngineProducer(), Car::new)
+//                //same but with two commands
+//                .zipWith(carEngineProducer())
+//                .map(tuple -> new Car(tuple.getT1(), tuple.getT2()))
+                ;
 
         //don't change below this line
         StepVerifier.create(producedCars)
@@ -331,6 +329,17 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
         return Mono.just("X")
                 .transformDeferred(currentMono -> sourceRef.get().equals("A") ? sourceA() : currentMono)
                 .transformDeferred(currentMono -> sourceRef.get().equals("B") ? sourceB() : currentMono);
+
+//        //also possible
+//        return Mono.defer(() -> {
+//            if (sourceRef.get().equals("A")) {
+//                return sourceA();
+//            } else if (sourceRef.get().equals("B")) {
+//                return sourceB();
+//            } else {
+//                return Mono.just("X");
+//            }
+//        });
     }
 
     @Test
