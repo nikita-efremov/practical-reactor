@@ -79,8 +79,11 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void ready_set_go() {
         //todo: feel free to change code as you need
         Flux<String> tasks = tasks()
-                .zipWith(semaphore())
-                .flatMap(Tuple2::getT1);
+                .concatMap(task -> task.delaySubscription(semaphore()))
+                //with combination of two lines below also possible
+//                .zipWith(semaphore())
+//                .flatMap(Tuple2::getT1)
+                ;
 
         //don't change code below
         StepVerifier.create(tasks)
@@ -106,7 +109,8 @@ public class c9_ExecutionControl extends ExecutionControlBase {
                                   assert NonBlocking.class.isAssignableFrom(Thread.currentThread().getClass());
                                   System.out.println("Task executing on: " + currentThread.getName());
                               })
-                              .publishOn(Schedulers.single())
+                              //.publishOn(Schedulers.parallel()) //also possible
+                              .subscribeOn(Schedulers.parallel())
                               //todo: change this line only
                               .then();
 
@@ -141,8 +145,8 @@ public class c9_ExecutionControl extends ExecutionControlBase {
 
         Flux<Void> taskQueue = Flux.just(task, task, task)
                                    .parallel(3)
-                                   .runOn(Schedulers.parallel())
-                                   .concatMap(Function.identity())
+                                   .runOn(Schedulers.boundedElastic())
+                                   .flatMap(Function.identity())
                                    .sequential();
 
         //don't change code below
@@ -160,7 +164,6 @@ public class c9_ExecutionControl extends ExecutionControlBase {
     public void sequential_free_runners() {
         //todo: feel free to change code as you need
         Flux<String> tasks = tasks()
-                .publishOn(Schedulers.boundedElastic())
                 .flatMapSequential(Function.identity());
         ;
 
