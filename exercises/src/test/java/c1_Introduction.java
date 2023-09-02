@@ -157,6 +157,7 @@ public class c1_Introduction extends IntroductionBase {
                 .subscribe(
                         companyList::add,
                         e -> System.out.println("Error"),
+                        //e -> {}, //also possible as error consumer
                         () -> serviceCallCompleted.set(true))
         //todo: change this line only
         ;
