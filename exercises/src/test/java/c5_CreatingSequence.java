@@ -238,8 +238,8 @@ public class c5_CreatingSequence {
     @Test
     public void repeat() {
         AtomicInteger counter = new AtomicInteger(0);
-        Mono<Integer> mono = Mono.fromCallable(counter::incrementAndGet);
-        Flux<Integer> repeated = mono.repeat(9); //todo: change this line
+        Flux<Integer> repeated = Mono.fromCallable(counter::incrementAndGet)
+                .repeat(9); //todo: change this line
 
         System.out.println("Repeat: ");
         StepVerifier.create(repeated.doOnNext(System.out::println))
