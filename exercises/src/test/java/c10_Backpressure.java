@@ -96,13 +96,19 @@ public class c10_Backpressure extends BackpressureBase {
      */
     @Test
     public void uuid_generator() {
-        Flux<UUID> uuidGenerator = Flux.create(sink -> {
-            long requested = sink.requestedFromDownstream();
-            for (int i = 0; i < requested; i++) {
+        Flux<UUID> uuidGenerator = Flux.create(sink -> sink.onRequest(requestedFromSubscriber -> {
+            for (int i = 0; i < requestedFromSubscriber; i++) {
                 sink.next(UUID.randomUUID());
             }
-            //todo: do your changes here
-        });
+        }));
+
+//        //looks like possible too
+//        Flux<UUID> uuidGenerator2 = Flux.create(sink -> {
+//            long requested = sink.requestedFromDownstream();
+//            for (int i = 0; i < requested; i++) {
+//                sink.next(UUID.randomUUID());
+//            }
+//        });
 
         StepVerifier.create(uuidGenerator
                                     .doOnNext(System.out::println)
@@ -189,8 +195,7 @@ public class c10_Backpressure extends BackpressureBase {
                     @Override
                     protected void hookOnNext(String s) {
                         System.out.println(s);
-                        count.incrementAndGet();
-                        if (count.get() == 10) {
+                        if (count.incrementAndGet() >= 10) {
                             cancel();
                         }
                     }
