@@ -37,7 +37,8 @@ public class c8_Sinks extends SinksBase {
         submitOperation(() -> {
 
             doSomeWork(); //don't change this line
-            sink.emitValue(true, Sinks.EmitFailureHandler.FAIL_FAST);
+            //sink.emitValue(true, Sinks.EmitFailureHandler.FAIL_FAST); //also possible
+            sink.tryEmitValue(true);
         });
 
         //don't change code below
@@ -55,12 +56,13 @@ public class c8_Sinks extends SinksBase {
     @Test
     public void single_subscriber() {
         //todo: feel free to change code as you need
-        var sink = Sinks.many().replay().<Integer>all();
+        //var sink = Sinks.many().replay().<Integer>all(); //also possible
+        var sink = Sinks.many().multicast().<Integer>onBackpressureBuffer();
         Flux<Integer> measurements = sink.asFlux();
         submitOperation(() -> {
 
             List<Integer> measures_readings = get_measures_readings(); //don't change this line
-            measures_readings.forEach(item -> sink.emitNext(item, Sinks.EmitFailureHandler.FAIL_FAST));
+            measures_readings.forEach(sink::tryEmitNext);
             sink.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
         });
 
@@ -83,8 +85,8 @@ public class c8_Sinks extends SinksBase {
         submitOperation(() -> {
 
             List<Integer> measures_readings = get_measures_readings(); //don't change this line
-            measures_readings.forEach(item -> sink.emitNext(item, Sinks.EmitFailureHandler.FAIL_FAST));
-            sink.emitComplete(Sinks.EmitFailureHandler.FAIL_FAST);
+            measures_readings.forEach(sink::tryEmitNext);
+            sink.tryEmitComplete();
         });
 
         //don't change code below
@@ -193,7 +195,10 @@ public class c8_Sinks extends SinksBase {
 
         for (int i = 1; i <= 50; i++) {
             int finalI = i;
-            new Thread(() -> sink.emitNext(finalI, (signalType, emitResult) -> true)).start();
+            new Thread(() -> sink.emitNext(
+                    finalI,
+                    (signalType, emitResult) -> emitResult.equals(Sinks.EmitResult.FAIL_NON_SERIALIZED))
+            ).start();
         }
 
         //don't change code below
