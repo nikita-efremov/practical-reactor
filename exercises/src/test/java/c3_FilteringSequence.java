@@ -41,8 +41,7 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
      */
     @Test
     public void needle_in_a_haystack() {
-        Flux<String> strings =
-        mashed_data_service()
+        Flux<String> strings = mashed_data_service()
                 .ofType(String.class)
                 //todo: change this line only
                 ;
@@ -76,8 +75,8 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     public void watch_out_for_the_spiders() {
         //todo: change code as you need
-        Mono<String> firstResult =
-        fragile_service().next();
+        Mono<String> firstResult = fragile_service()
+                .next();
 
         //don't change code below
         StepVerifier.create(firstResult)
@@ -123,7 +122,8 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
     public void golden_middle() {
         Flux<Integer> numbers = number_service()
                 .skip(100)
-                .skipLast(100)
+                .take(100)
+                //.skipLast(100) //also possible here
                 //todo: do your changes here
                 ;
 
